@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: VAR_POD_NAME
+spec:
+  containers:
+    - name: main
+      image: busybox
+      volumeMounts:
+        - mountPath: /
+          name: mypvc
+  volumes:
+    - name: mypvc
+      persistentVolumeClaim:
+        claimName: VAR_PVC_NAME
+        readOnly: false
