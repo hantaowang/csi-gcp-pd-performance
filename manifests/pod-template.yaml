@@ -6,11 +6,18 @@ spec:
   containers:
     - name: main
       image: busybox
+      command: ["sleep", "infinity"]
       volumeMounts:
-        - mountPath: /
-          name: mypvc
+        - mountPath: /tmp/mypvc1
+          name: mypvc1
+        - mountPath: /tmp/mypvc2
+          name: mypvc2
   volumes:
-    - name: mypvc
+    - name: mypvc1
       persistentVolumeClaim:
-        claimName: VAR_PVC_NAME
+        claimName: VAR_PVC_NAME1
+        readOnly: false
+    - name: mypvc2
+      persistentVolumeClaim:
+        claimName: VAR_PVC_NAME2
         readOnly: false
