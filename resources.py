@@ -1,7 +1,7 @@
 import os
 import tempfile
 import time
-from utils import execute
+from utils import execute, set_env_if_true
 
 
 def write_to_tempfile(s, tempdir=None):
