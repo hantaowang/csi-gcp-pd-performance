@@ -71,4 +71,4 @@ def wait_for_all(resource, desired, kubeconfig=None):
 
 def get_statuses(resource, kubeconfig=None):
 	cmd = ['kubectl', 'get', resource, '-o', 'jsonpath={.items[*].status.phase}']
-	return execute(cmd, env=set_env_if_true('KUBECONFIG', kubeconfig)).split()
+	return execute(cmd, env=set_env_if_true('KUBECONFIG', kubeconfig), hide_output=True, hide_cmd=True).split()
