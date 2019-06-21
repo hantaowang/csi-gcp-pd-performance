@@ -1,7 +1,10 @@
 import os
 import tempfile
 import time
+import json
 from utils import execute, set_env_if_true
+
+tmp_dirs = []
 
 
 def write_to_tempfile(s, tempdir=None):
@@ -57,18 +60,43 @@ def delete(path=None, resource_dict=None, kubeconfig=None):
 
 
 def get_tmp_dir():
-	return tempfile.TemporaryDirectory()
+	td = tempfile.TemporaryDirectory()
+	tmp_dirs.append(td)
+	return td
 
 
-def wait_for_all(resource, desired, kubeconfig=None):
+def wait_for_all(resource, state_desired, num_desired, labels=None, kubeconfig=None):
+	time_finished = {}
+
 	while True:
-		statuses = get_statuses(resource, kubeconfig=kubeconfig)
-		if statuses.count(desired) == len(statuses):
+		try:
+			descriptions = get_descriptions(resource, labels=labels, kubeconfig=kubeconfig)
+		except json.decoder.JSONDecodeError:
+			time.sleep(0.5)
+			continue
+
+		statuses = list(map(lambda x: x['status']['phase'], descriptions['items']))
+		names = list(map(lambda x: x['metadata']['name'], descriptions['items']))
+		for i in range(len(names)):
+			if statuses[i] == state_desired and names[i] not in time_finished:
+				time_finished[names[i]] = time.time()
+		if statuses.count(state_desired) == num_desired:
 			break
-		print("Expected {} of {}, but found {}".format(len(statuses), resource, statuses.count(desired)))
-		time.sleep(1)
+		print("Expected {} {} in {} phase, but found {}".format(num_desired, resource, state_desired,
+																statuses.count(state_desired)), end='\r')
+	print("")
+	return time_finished
 
 
-def get_statuses(resource, kubeconfig=None):
-	cmd = ['kubectl', 'get', resource, '-o', 'jsonpath={.items[*].status.phase}']
-	return execute(cmd, env=set_env_if_true('KUBECONFIG', kubeconfig), hide_output=True, hide_cmd=True).split()
+def get_descriptions(resource, labels=None, kubeconfig=None):
+	cmd = ['kubectl', 'get', resource, '-o', 'json']
+	if labels is not None and isinstance(labels, dict):
+		cmd.append('-l')
+		s = ''
+		for k, v in labels.items():
+			s += '{}={}'.format(k, v)
+			s += ','
+		if s[-1] == ',':
+			s = s[:-1]
+		cmd.append(s)
+	return json.loads(execute(cmd, env=set_env_if_true('KUBECONFIG', kubeconfig), hide_output=True, hide_cmd=True))

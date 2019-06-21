@@ -2,6 +2,8 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: VAR_POD_NAME
+  labels:
+    purpose: experiment
 spec:
   containers:
     - name: main
@@ -10,14 +12,14 @@ spec:
       volumeMounts:
         - mountPath: /tmp/mypvc1
           name: mypvc1
-        - mountPath: /tmp/mypvc2
-          name: mypvc2
+#        - mountPath: /tmp/mypvc2
+#          name: mypvc2
   volumes:
     - name: mypvc1
       persistentVolumeClaim:
         claimName: VAR_PVC_NAME1
         readOnly: false
-    - name: mypvc2
-      persistentVolumeClaim:
-        claimName: VAR_PVC_NAME2
-        readOnly: false
+#    - name: mypvc2
+#      persistentVolumeClaim:
+#        claimName: VAR_PVC_NAME2
+#        readOnly: false

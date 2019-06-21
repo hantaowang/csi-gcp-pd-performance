@@ -1,13 +1,13 @@
 import json
 import os
 import uuid
+from resources import get_tmp_dir, template, deploy
 from utils import execute, set_env_if_true
 
-DEFAULT_GCE_PD_DIR = '/usr/local/google/home/hww/go/src/sigs.k8s.io/gcp-compute-persistent-disk-csi-driver'
-DEFAULT_GCE_PD_CSI_STAGING_IMAGE = 'gcr.io/hww-gke-dev/gcp-pd-csi-driver-test'
+BASE_CLUSTER_NAME = 'test-cluster'
 
 
-def cluster_up(name, recreate_if_exists = True, **kwargs):
+def cluster_up(name, recreate_if_exists=True, **kwargs):
 
     num_nodes = kwargs.get('num_nodes', 1)
     machine_type = kwargs.get('machine_type', 'n1-standard-16')
@@ -56,18 +56,21 @@ def check_cluster_status(name=None, zone=None):
     return []
 
 
-def cluster_down(name, zone='us-central1-a'):
-
-    execute(['gcloud', 'container', 'clusters', 'delete', name, '--zone', zone, '--quiet'])
+def cluster_down(name, zone='us-central1-a', background=False):
+    cmd = ['gcloud', 'container', 'clusters', 'delete', name, '--zone', zone, '--quiet']
+    if background:
+        cmd.append('--async')
+    execute(cmd)
 
 
 def get_cluster_credentials(name, kubeconfig, zone='us-central1-a'):
 
     execute(['gcloud', 'container', 'clusters', 'get-credentials', name, '--zone', zone],
             env={'KUBECONFIG': kubeconfig})
+    print("Wrote kube config to {}".format(kubeconfig))
 
 
-def install_driver(gce_pd_dir=DEFAULT_GCE_PD_DIR, staging_image=DEFAULT_GCE_PD_CSI_STAGING_IMAGE, kubeconfig=None):
+def install_driver(gce_pd_dir, staging_image, kubeconfig=None):
     execute(['make', "-C", gce_pd_dir, "test-k8s-integration"])
 
     args = [
@@ -91,3 +94,22 @@ def install_driver(gce_pd_dir=DEFAULT_GCE_PD_DIR, staging_image=DEFAULT_GCE_PD_C
 
     execute(cmd, env=set_env_if_true('KUBECONFIG', kubeconfig))
 
+
+def set_up_cluster(**kwargs):
+    cluster_name = BASE_CLUSTER_NAME + "-" + str(uuid.uuid4())[:4]
+
+    kube_tmp_dir = get_tmp_dir()
+    kube_config = str(os.path.join(kube_tmp_dir.name, "config"))
+
+    cluster_up(cluster_name, recreate_if_exists=False, release_channel='rapid', **kwargs)
+    get_cluster_credentials(cluster_name, kube_config)
+
+    return cluster_name, kube_config
+
+
+def use_existing_cluster(cluster_name, **kwargs):
+    kube_tmp_dir = get_tmp_dir()
+    kube_config = str(os.path.join(kube_tmp_dir.name, "config"))
+    get_cluster_credentials(cluster_name, kube_config, **kwargs)
+
+    return kube_config
