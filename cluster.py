@@ -101,7 +101,7 @@ def set_up_cluster(**kwargs):
     kube_tmp_dir = get_tmp_dir()
     kube_config = str(os.path.join(kube_tmp_dir.name, "config"))
 
-    cluster_up(cluster_name, recreate_if_exists=False, release_channel='rapid', **kwargs)
+    cluster_up(cluster_name, recreate_if_exists=False, **kwargs)
     get_cluster_credentials(cluster_name, kube_config)
 
     return cluster_name, kube_config
